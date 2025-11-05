@@ -4,7 +4,7 @@ import OpenAI from "openai";
 const router = express.Router();
 
 const openai = new OpenAI({
-  apiKey:"sk-proj-nIYpshTrJnuUAthDAHsVDj_UI5kR6QLEh_2PjBUke0h2_Cm4Qq2aqBLLj1ZBcA0Y5Cgby1WLn1T3BlbkFJSxwTAlvcFJ1P7Uq9I2I2qZ1qf8cgLQTbdCk2HFnJOLyXxlxUH9oXjCOrUfYu1ln6oltw-2VYkAokk"// must match .env
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 router.post("/verify-doc", async (req, res) => {
