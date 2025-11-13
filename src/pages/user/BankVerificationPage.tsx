@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ShieldCheck, Search, Eye, AlertCircle, CheckCircle2, XCircle, Hash, FileText } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { ShieldCheck, Search, Eye, AlertCircle, CheckCircle2, XCircle, Hash, FileText, Users, Clock } from 'lucide-react';
+import { useAnimatedCounter } from '../../hooks/useAnimatedCounter';
 import Button from '../../components/common/Button';
 import { getUsers, getUserDocuments, verifyDocument, analyzeFraud, updateVerification, getVerificationHistory } from '../../services/mockApi';
 import { useAuth } from '../../contexts/AuthContext';
@@ -29,6 +31,17 @@ const BankVerificationPage: React.FC = () => {
   const [docs, setDocs] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Animated summary counters derived from current items
+  const totalUsers = items.length;
+  const pendingCount = items.filter(i => i.verificationStatus === 'pending').length;
+  const verifiedCount = items.filter(i => i.verificationStatus === 'verified').length;
+  const flaggedCount = items.filter(i => i.verificationStatus === 'flagged').length;
+
+  const totalUsersAnimated = useAnimatedCounter ? useAnimatedCounter({ end: totalUsers, start: 0, duration: 800 }) : totalUsers;
+  const pendingAnimated = useAnimatedCounter ? useAnimatedCounter({ end: pendingCount, start: 0, duration: 800 }) : pendingCount;
+  const verifiedAnimated = useAnimatedCounter ? useAnimatedCounter({ end: verifiedCount, start: 0, duration: 800 }) : verifiedCount;
+  const flaggedAnimated = useAnimatedCounter ? useAnimatedCounter({ end: flaggedCount, start: 0, duration: 800 }) : flaggedCount;
 
   useEffect(() => {
     if (user?.role !== 'bank') return; // role gate
@@ -102,7 +115,7 @@ const BankVerificationPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="glassmorphism rounded-xl p-6">
+      <div className="rounded-xl p-6 backdrop-blur-md border border-white/6 bg-gradient-to-br from-indigo-900/12 to-slate-900/6">
         <div className="flex items-center space-x-2">
           <ShieldCheck className="w-6 h-6 text-blue-400" />
           <div>
@@ -110,6 +123,46 @@ const BankVerificationPage: React.FC = () => {
             <p className="text-gray-300">Verify customer KYC documents with blockchain-backed integrity and AI fraud detection</p>
           </div>
         </div>
+      </div>
+
+      {/* Quick Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <motion.div whileHover={{ y: -6 }} className="rounded-xl p-4 flex items-center justify-between bg-gradient-to-br from-indigo-900/30 to-cyan-800/12 border border-white/6">
+          <div>
+            <p className="text-sm text-gray-400">Total Users</p>
+            <p className="text-xl font-bold text-white">{Math.round(totalUsersAnimated)}</p>
+          </div>
+          <div className="p-2 bg-white/5 rounded-lg">
+            <Users className="w-6 h-6 text-blue-300" />
+          </div>
+        </motion.div>
+        <motion.div whileHover={{ y: -6 }} className="rounded-xl p-4 flex items-center justify-between bg-gradient-to-br from-yellow-900/20 to-amber-800/8 border border-white/6">
+          <div>
+            <p className="text-sm text-gray-400">Pending</p>
+            <p className="text-xl font-bold text-yellow-400">{Math.round(pendingAnimated)}</p>
+          </div>
+          <div className="p-2 bg-white/5 rounded-lg">
+            <Clock className="w-6 h-6 text-yellow-300" />
+          </div>
+        </motion.div>
+        <motion.div whileHover={{ y: -6 }} className="rounded-xl p-4 flex items-center justify-between bg-gradient-to-br from-green-900/20 to-emerald-800/8 border border-white/6">
+          <div>
+            <p className="text-sm text-gray-400">Verified</p>
+            <p className="text-xl font-bold text-green-400">{Math.round(verifiedAnimated)}</p>
+          </div>
+          <div className="p-2 bg-white/5 rounded-lg">
+            <CheckCircle2 className="w-6 h-6 text-green-300" />
+          </div>
+        </motion.div>
+        <motion.div whileHover={{ y: -6 }} className="rounded-xl p-4 flex items-center justify-between bg-gradient-to-br from-red-900/20 to-rose-800/8 border border-white/6">
+          <div>
+            <p className="text-sm text-gray-400">Flagged</p>
+            <p className="text-xl font-bold text-red-400">{Math.round(flaggedAnimated)}</p>
+          </div>
+          <div className="p-2 bg-white/5 rounded-lg">
+            <AlertCircle className="w-6 h-6 text-red-300" aria-label="Flagged" />
+          </div>
+        </motion.div>
       </div>
 
       {/* Search & Filters */}
@@ -147,8 +200,8 @@ const BankVerificationPage: React.FC = () => {
         {isLoading ? (
           <div className="p-6 text-gray-300">Loading...</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="-mx-4 px-4 md:mx-0 md:px-0 overflow-x-auto">
+            <table className="w-full min-w-[720px] md:min-w-full">
               <thead className="bg-gray-800/50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">User ID</th>
@@ -175,7 +228,7 @@ const BankVerificationPage: React.FC = () => {
                       <Button size="sm" variant="secondary" onClick={() => openUser(u)} disabled={u.consentStatus !== 'granted'} aria-label="View user">
                         <Eye className="w-4 h-4 mr-1" /> View
                       </Button>
-                      {u.consentStatus !== 'granted' && <AlertCircle className="w-4 h-4 text-red-400 ml-2 inline" title="Consent revoked" />}
+                      {u.consentStatus !== 'granted' && <AlertCircle className="w-4 h-4 text-red-400 ml-2 inline" aria-label="Consent revoked" />}
                     </td>
                   </tr>
                 ))}
@@ -195,9 +248,9 @@ const BankVerificationPage: React.FC = () => {
 
       {/* Detail Modal */}
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
           <div className="absolute inset-0 bg-black/60" aria-hidden="true" onClick={() => setSelected(null)}></div>
-          <div role="dialog" aria-modal="true" aria-label="User Verification Details" className="relative glassmorphism rounded-xl p-6 w-full max-w-4xl">
+          <div role="dialog" aria-modal="true" aria-label="User Verification Details" className="relative glassmorphism rounded-xl p-4 md:p-6 w-full max-w-full md:max-w-4xl">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h4 className="text-white text-xl font-semibold">{selected.fullName}</h4>

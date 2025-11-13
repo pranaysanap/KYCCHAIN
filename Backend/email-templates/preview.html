@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTP Email Templates Preview - KYCChain</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 50px;
+    }
+
+    .header h1 {
+      font-size: 48px;
+      font-weight: 800;
+      margin-bottom: 15px;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .header p {
+      font-size: 18px;
+      opacity: 0.95;
+      margin-bottom: 30px;
+    }
+
+    .controls {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 25px;
+      margin-bottom: 40px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .control-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .control-group label {
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    input, select {
+      padding: 10px 15px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.95);
+      font-size: 14px;
+      font-weight: 600;
+      color: #2d3748;
+      transition: all 0.3s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: white;
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+    }
+
+    .btn {
+      padding: 12px 24px;
+      background: white;
+      color: #667eea;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .templates-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .template-card {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      transition: transform 0.3s;
+    }
+
+    .template-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .template-header {
+      background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+      padding: 20px;
+      color: white;
+    }
+
+    .template-header h2 {
+      font-size: 22px;
+      margin-bottom: 5px;
+    }
+
+    .template-header p {
+      font-size: 13px;
+      opacity: 0.85;
+    }
+
+    .template-preview {
+      width: 100%;
+      height: 600px;
+      border: none;
+      background: white;
+    }
+
+    .footer {
+      text-align: center;
+      color: white;
+      margin-top: 50px;
+      padding-top: 30px;
+      border-top: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .footer p {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-bottom: 10px;
+    }
+
+    .info-banner {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .info-banner h3 {
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    .info-banner ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .info-banner li {
+      padding: 5px 0;
+      padding-left: 25px;
+      position: relative;
+    }
+
+    .info-banner li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #64ffda;
+      font-weight: bold;
+    }
+
+    @media (max-width: 768px) {
+      .templates-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .header h1 {
+        font-size: 32px;
+      }
+
+      .controls {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎨 OTP Email Templates</h1>
+      <p>Beautiful, Professional, Responsive Email Templates for KYCChain</p>
+    </div>
+
+    <div class="info-banner">
+      <h3>📦 Available Templates</h3>
+      <ul>
+        <li><strong>Premium Gradient:</strong> Ultra modern design with beautiful purple-blue gradient</li>
+        <li><strong>Elegant Minimalist:</strong> Clean, professional design with subtle animations</li>
+        <li><strong>Dark Theme:</strong> Sleek, modern dark design with neon accents</li>
+      </ul>
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="otpInput">OTP Code:</label>
+        <input type="text" id="otpInput" value="123456" maxlength="6" placeholder="Enter OTP">
+      </div>
+      <div class="control-group">
+        <label for="emailInput">Email:</label>
+        <input type="email" id="emailInput" value="user@example.com" placeholder="user@example.com">
+      </div>
+      <button class="btn" onclick="updatePreviews()">🔄 Update Preview</button>
+      <button class="btn" onclick="toggleView()">📱 Toggle View</button>
+    </div>
+
+    <div class="templates-grid" id="templatesGrid">
+      <!-- Template 1: Premium -->
+      <div class="template-card">
+        <div class="template-header">
+          <h2>Premium Gradient</h2>
+          <p>Ultra modern with beautiful gradient theme</p>
+        </div>
+        <iframe class="template-preview" id="premium-preview" srcdoc=""></iframe>
+      </div>
+
+      <!-- Template 2: Elegant -->
+      <div class="template-card">
+        <div class="template-header">
+          <h2>Elegant Minimalist</h2>
+          <p>Clean, professional design</p>
+        </div>
+        <iframe class="template-preview" id="elegant-preview" srcdoc=""></iframe>
+      </div>
+
+      <!-- Template 3: Dark -->
+      <div class="template-card">
+        <div class="template-header">
+          <h2>Dark Theme</h2>
+          <p>Sleek, modern with neon accents</p>
+        </div>
+        <iframe class="template-preview" id="dark-preview" srcdoc=""></iframe>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>Created with ❤️ for KYCChain</p>
+      <p>© 2024 KYCChain. All rights reserved.</p>
+      <p style="font-size: 12px; margin-top: 20px;">
+        💡 Tip: Open browser console and run <code style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">getTemplateHTML('premium')</code> to get the HTML code
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Note: In a real implementation, you would import the actual template functions
+    // For this preview, we'll use inline template definitions
+
+    function premiumOTPTemplate(otp, email = '') {
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Verification Code - KYCChain</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px;">
+    <tr><td align="center">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+          <tr>
+            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 50px 40px; text-align: center; position: relative;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 36px; font-weight: 800; text-shadow: 0 4px 12px rgba(0,0,0,0.2); letter-spacing: -0.5px;">KYCChain</h1>
+              <p style="color: rgba(255, 255, 255, 0.95); margin: 12px 0 0 0; font-size: 16px;">Secure Identity Verification</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 60px 40px 40px 40px;">
+              <h2 style="color: #1a202c; margin: 0 0 20px 0; font-size: 32px; font-weight: 700; text-align: center;">Email Verification</h2>
+              <p style="color: #4a5568; font-size: 17px; line-height: 1.7; margin: 0 0 40px 0; text-align: center;">Welcome aboard! 🎉 We're excited to have you join KYCChain.</p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 40px 0;">
+                <tr><td align="center">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; padding: 40px 30px; text-align: center; box-shadow: 0 10px 40px rgba(102, 126, 234, 0.4);">
+                      <p style="color: rgba(255, 255, 255, 0.9); font-size: 13px; margin: 0 0 20px 0; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">Your Verification Code</p>
+                      <div style="background: rgba(255, 255, 255, 0.15); border-radius: 16px; padding: 25px 40px; margin: 0 auto; display: inline-block;">
+                        <span style="font-size: 48px; font-weight: 800; color: #ffffff; letter-spacing: 12px; font-family: 'Courier New', Courier, monospace;">${otp}</span>
+                      </div>
+                      <p style="color: rgba(255, 255, 255, 0.85); font-size: 14px; margin: 25px 0 0 0;">⏱️ Valid for <strong>5 minutes</strong></p>
+                    </div>
+                  </td></tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 40px; text-align: center;">
+              <h3 style="color: #2d3748; margin: 0 0 10px 0; font-size: 20px; font-weight: 700;">KYCChain</h3>
+              <p style="color: #a0aec0; font-size: 12px; margin: 20px 0 0 0;">© ${new Date().getFullYear()} KYCChain. All rights reserved.</p>
+              ${email ? `<p style="color: #cbd5e0; font-size: 11px; margin: 15px 0 0 0;">Email sent to: ${email}</p>` : ''}
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+  </table>
+</body>
+</html>`;
+    }
+
+    function elegantOTPTemplate(otp, email = '') {
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email - KYCChain</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f7fa; padding: 50px 20px;">
+    <tr><td align="center">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 16px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08); overflow: hidden;">
+          <tr>
+            <td style="padding: 50px 40px 30px 40px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              <h1 style="margin: 0; font-size: 32px; font-weight: 700; color: #ffffff;">KYCChain</h1>
+              <p style="margin: 8px 0 0 0; font-size: 15px; color: rgba(255, 255, 255, 0.9);">Secure Identity Verification</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 50px 40px;">
+              <h2 style="margin: 0 0 16px 0; font-size: 28px; font-weight: 700; color: #1a202c; text-align: center;">Verify Your Email</h2>
+              <p style="margin: 0 0 30px 0; font-size: 16px; line-height: 1.6; color: #4a5568; text-align: center;">Thank you for choosing KYCChain!</p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 35px 0;">
+                <tr><td align="center">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 35px 40px; border-radius: 16px; box-shadow: 0 8px 25px rgba(102, 126, 234, 0.35);">
+                      <p style="margin: 0 0 15px 0; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.85); letter-spacing: 2px; text-transform: uppercase;">Verification Code</p>
+                      <div style="background: rgba(255, 255, 255, 0.15); padding: 20px 35px; border-radius: 12px; display: inline-block;">
+                        <span style="font-size: 44px; font-weight: 800; color: #ffffff; letter-spacing: 10px; font-family: 'Courier New', monospace;">${otp}</span>
+                      </div>
+                      <p style="margin: 15px 0 0 0; font-size: 13px; color: rgba(255, 255, 255, 0.85);"><strong>Expires in 5 minutes</strong></p>
+                    </div>
+                  </td></tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: linear-gradient(180deg, #f7fafc 0%, #edf2f7 100%); padding: 35px 40px; text-align: center;">
+              <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: #2d3748;">KYCChain</h3>
+              <p style="margin: 0; font-size: 12px; color: #a0aec0;">© ${new Date().getFullYear()} KYCChain. All rights reserved.</p>
+              ${email ? `<p style="margin: 15px 0 0 0; font-size: 11px; color: #cbd5e0;">Sent to: ${email}</p>` : ''}
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+  </table>
+</body>
+</html>`;
+    }
+
+    function darkOTPTemplate(otp, email = '') {
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email - KYCChain</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0f0f23;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0f0f23; padding: 50px 20px;">
+    <tr><td align="center">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; width: 100%; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); overflow: hidden; border: 1px solid rgba(102, 126, 234, 0.2);">
+          <tr>
+            <td style="padding: 50px 40px 35px 40px; text-align: center; background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);">
+              <h1 style="margin: 0; font-size: 38px; font-weight: 800; color: #ffffff; letter-spacing: -1px; text-shadow: 0 0 20px rgba(102, 126, 234, 0.5);">KYCChain</h1>
+              <p style="margin: 10px 0 0 0; font-size: 15px; color: #a8b2d1; letter-spacing: 1px;">SECURE IDENTITY VERIFICATION</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 50px 40px;">
+              <h2 style="margin: 0 0 20px 0; font-size: 30px; font-weight: 700; color: #e6f1ff; text-align: center;">Email Verification</h2>
+              <p style="margin: 0 0 40px 0; font-size: 16px; line-height: 1.7; color: #8892b0; text-align: center;">Welcome to the future! 🚀</p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 40px 0;">
+                <tr><td align="center">
+                    <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%); padding: 40px; border-radius: 18px; border: 2px solid rgba(102, 126, 234, 0.3); box-shadow: 0 0 40px rgba(102, 126, 234, 0.2);">
+                      <p style="margin: 0 0 20px 0; font-size: 11px; font-weight: 700; color: #64ffda; letter-spacing: 3px; text-transform: uppercase;">⚡ Your Code ⚡</p>
+                      <div style="background: rgba(0, 0, 0, 0.3); padding: 25px 40px; border-radius: 14px; display: inline-block; border: 2px solid rgba(102, 126, 234, 0.4);">
+                        <span style="font-size: 52px; font-weight: 900; color: #64ffda; letter-spacing: 14px; font-family: 'Courier New', monospace; text-shadow: 0 0 20px rgba(100, 255, 218, 0.5);">${otp}</span>
+                      </div>
+                      <p style="margin: 20px 0 0 0; font-size: 14px; color: #64ffda;">⏱️ <strong>Expires in 5 minutes</strong></p>
+                    </div>
+                  </td></tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: linear-gradient(180deg, rgba(15, 15, 35, 0.5) 0%, rgba(10, 10, 20, 0.8) 100%); padding: 40px; text-align: center;">
+              <h3 style="margin: 0 0 10px 0; font-size: 20px; font-weight: 800; color: #e6f1ff;">KYCChain</h3>
+              <p style="margin: 0; font-size: 11px; color: #495670;">© ${new Date().getFullYear()} KYCChain. All rights reserved.</p>
+              ${email ? `<p style="margin: 20px 0 0 0; font-size: 10px; color: #495670;">${email}</p>` : ''}
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+  </table>
+</body>
+</html>`;
+    }
+
+    const templates = {
+      premium: premiumOTPTemplate,
+      elegant: elegantOTPTemplate,
+      dark: darkOTPTemplate
+    };
+
+    function updatePreviews() {
+      const otp = document.getElementById('otpInput').value || '123456';
+      const email = document.getElementById('emailInput').value || 'user@example.com';
+
+      document.getElementById('premium-preview').srcdoc = templates.premium(otp, email);
+      document.getElementById('elegant-preview').srcdoc = templates.elegant(otp, email);
+      document.getElementById('dark-preview').srcdoc = templates.dark(otp, email);
+    }
+
+    function toggleView() {
+      const grid = document.getElementById('templatesGrid');
+      if (grid.style.gridTemplateColumns === '1fr') {
+        grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(500px, 1fr))';
+      } else {
+        grid.style.gridTemplateColumns = '1fr';
+      }
+    }
+
+    // Function to get template HTML (accessible from console)
+    function getTemplateHTML(templateName = 'premium', otp = '123456', email = 'user@example.com') {
+      const template = templates[templateName];
+      if (template) {
+        const html = template(otp, email);
+        console.log(`\n=== ${templateName.toUpperCase()} TEMPLATE HTML ===\n`);
+        console.log(html);
+        console.log(`\n=== END OF TEMPLATE ===\n`);
+        return html;
+      } else {
+        console.error(`Template "${templateName}" not found. Available: premium, elegant, dark`);
+        return null;
+      }
+    }
+
+    // Make it globally accessible
+    window.getTemplateHTML = getTemplateHTML;
+
+    // Initial load
+    updatePreviews();
+
+    // Auto-update on input change
+    document.getElementById('otpInput').addEventListener('input', updatePreviews);
+    document.getElementById('emailInput').addEventListener('input', updatePreviews);
+  </script>
+</body>
+</html>

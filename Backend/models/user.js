@@ -1,33 +1,58 @@
 import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema({
-  fullName: {
-    type: String,
-    required: true,
-    trim: true,
+const userSchema = new mongoose.Schema(
+  {
+    fullName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    institutionName: {
+      type: String,
+      trim: true,
+    },
+    normalizedInstitutionName: {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+    },
+    address: {
+      type: String,
+      required: true,
+    },
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    profileImage: {
+      type: String,
+      default: null,
+    },
+    profileImagePublicId: {
+      type: String,
+      default: null,
+    },
+    accountType: {
+      type: String,
+      default: "Individual User",
+    },
   },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
+  {
+    timestamps: true,
   },
-  accountType: {
-    type: String,
-    enum: ["Individual User", "Bank/Institution"],
-    required: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-  phone: {
-    type: String,
-    default: '',
-  },
-  address: {
-    type: String,
-    default: '',
-  },
-});
+);
 
 export default mongoose.model("User", userSchema);

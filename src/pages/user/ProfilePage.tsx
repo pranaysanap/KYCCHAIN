@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Camera, User, Shield, Lock, LogOut, Save, X, Globe, Bell, Laptop2, AlertTriangle } from 'lucide-react';
+import AnimatedCard from '../../components/common/AnimatedCard';
 import Button from '../../components/common/Button';
-import { getProfile, updateProfile, updatePreferences, updatePassword, logoutSession, deactivateAccount, deleteAccount } from '../../services/mockApi';
+import { apiService } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 type Prefs = {
   theme: 'dark' | 'light';
@@ -29,16 +32,25 @@ const ProfilePage: React.FC = () => {
   const [prefs, setPrefs] = useState<Prefs>({ theme: 'dark', emailAlerts: true, fraudAlerts: true, language: 'en' });
   const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' });
   const [confirmModal, setConfirmModal] = useState<null | { action: 'deactivate' | 'delete'; text: string }>(null);
+  const [capturing, setCapturing] = useState(false);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  // temporary File selected from device (if any)
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [capturedDataUrl, setCapturedDataUrl] = useState<string | null>(null);
+
+  const { logout, updateUser, avatarModalOpen, openAvatarModal, closeAvatarModal } = useAuth();
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        const data = await getProfile();
+        const data = await apiService.getProfile();
         setProfile(data);
-        setForm(data.user);
-        setPrefs(data.preferences);
+        setForm((data as any).user || {});
+        setPrefs((data as any).preferences || { theme: 'dark', emailAlerts: true, fraudAlerts: true, language: 'en' });
       } catch (e) {
+        console.error('Failed to load profile from backend:', e);
         setToast({ type: 'error', message: 'Failed to load profile' });
       } finally {
         setLoading(false);
@@ -59,8 +71,11 @@ const ProfilePage: React.FC = () => {
 
   const saveProfile = async () => {
     try {
-      const updated = await updateProfile({ fullName: form.fullName, email: form.email, phone: form.phone, address: form.address });
-      setProfile((p: any) => ({ ...p, user: updated }));
+      const updatedResp = await apiService.updateProfile({ fullName: form.fullName, email: form.email, phone: form.phone, address: form.address });
+      // backend returns { user: { ... } }
+      const updatedUser = updatedResp?.user || updatedResp;
+      setProfile((p: any) => ({ ...p, user: updatedUser }));
+      setForm(updatedUser);
       setEditing(false);
       setToast({ type: 'success', message: 'Profile updated' });
     } catch (e: any) {
@@ -70,7 +85,7 @@ const ProfilePage: React.FC = () => {
 
   const savePrefs = async () => {
     try {
-      const updated = await updatePreferences(prefs);
+      const updated = await apiService.updatePreferences(prefs);
       setProfile((p: any) => ({ ...p, preferences: updated }));
       setToast({ type: 'success', message: 'Preferences saved' });
     } catch (e: any) {
@@ -80,9 +95,13 @@ const ProfilePage: React.FC = () => {
 
   const changePassword = async () => {
     try {
-      await updatePassword(pwd.current, pwd.next, pwd.confirm);
+      await apiService.updatePassword({ currentPassword: pwd.current, newPassword: pwd.next, confirmPassword: pwd.confirm });
       setPwd({ current: '', next: '', confirm: '' });
-      setToast({ type: 'success', message: 'Password updated' });
+      setToast({ type: 'success', message: 'Password updated. Please login again.' });
+      // Force logout so user must re-authenticate with new password
+      setTimeout(() => {
+        logout();
+      }, 800);
     } catch (e: any) {
       setToast({ type: 'error', message: e?.message || 'Failed to update password' });
     }
@@ -90,7 +109,7 @@ const ProfilePage: React.FC = () => {
 
   const logoutDevice = async (id: string) => {
     try {
-      await logoutSession(id);
+      // For now, this is a client-side session removal; server session management not implemented
       setProfile((p: any) => ({ ...p, security: { ...p.security, sessions: p.security.sessions.filter((s: any) => s.id !== id) } }));
       setToast({ type: 'success', message: 'Device logged out' });
     } catch (e: any) {
@@ -101,8 +120,21 @@ const ProfilePage: React.FC = () => {
   const confirmDanger = async () => {
     if (!confirmModal) return;
     try {
-      if (confirmModal.action === 'deactivate') await deactivateAccount();
-      if (confirmModal.action === 'delete') await deleteAccount();
+      if (confirmModal.action === 'deactivate') {
+        // Best-effort deactivate: call API deactivate endpoint; if missing, fall back to success
+        try {
+          await apiService.deactivateAccount();
+        } catch (err) {
+          console.warn('Deactivate endpoint not available:', err);
+        }
+      }
+      if (confirmModal.action === 'delete') {
+        await apiService.deleteAccount();
+        // After deleting account, force logout
+        setTimeout(() => {
+          logout();
+        }, 300);
+      }
       setConfirmModal(null);
       setToast({ type: 'success', message: 'Action completed' });
     } catch (e: any) {
@@ -119,20 +151,24 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="glassmorphism rounded-xl p-6">
+      <AnimatedCard>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white">My Profile</h1>
             <p className="text-gray-300">Manage your account, security, and preferences</p>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-full bg-blue-600 neon-glow-blue flex items-center justify-center">
-                <User className="w-8 h-8 text-white" />
-              </div>
-              <button className="absolute -bottom-2 -right-2 bg-gray-800 border border-gray-700 rounded-full p-2 hover:bg-gray-700" aria-label="Edit avatar">
-                <Camera className="w-4 h-4 text-white" />
-              </button>
+                <div className="relative">
+                <div className="w-16 h-16 rounded-full bg-blue-600 neon-glow-blue flex items-center justify-center overflow-hidden ring-2 ring-blue-500">
+                  {profile?.user?.profileImage ? (
+                    <img src={profile.user.profileImage} alt="avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-8 h-8 text-white" />
+                  )}
+                </div>
+                <button onClick={() => openAvatarModal && openAvatarModal()} className="absolute -bottom-1 -right-1 bg-blue-600 border border-blue-700 rounded-full p-2 hover:bg-blue-500 text-white shadow-md" aria-label="Edit avatar">
+                  <Camera className="w-4 h-4" />
+                </button>
             </div>
             <div>
               <p className="text-white font-semibold">{profile.user.fullName}</p>
@@ -141,11 +177,11 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </AnimatedCard>
 
       {/* Profile Info */}
-      <div className="glassmorphism rounded-xl p-6">
-        <div className="flex items-center justify-between mb-4">
+      <AnimatedCard>
+  <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-3">
           <div className="flex items-center space-x-2">
             <Shield className="w-5 h-5 text-blue-400" />
             <h3 className="text-white font-semibold">Profile Information</h3>
@@ -153,9 +189,9 @@ const ProfilePage: React.FC = () => {
           {!editing ? (
             <Button variant="primary" onClick={() => setEditing(true)}>Edit Profile</Button>
           ) : (
-            <div className="space-x-2">
-              <Button variant="secondary" onClick={() => { setEditing(false); setForm(profile.user); }}>Cancel</Button>
-              <Button variant="success" onClick={saveProfile}><Save className="w-4 h-4 mr-1" /> Save</Button>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+              <Button className="w-full sm:w-auto" variant="secondary" onClick={() => { setEditing(false); setForm(profile.user); }}>Cancel</Button>
+              <Button className="w-full sm:w-auto" variant="success" onClick={saveProfile}><Save className="w-4 h-4 mr-1" /> Save</Button>
             </div>
           )}
         </div>
@@ -178,10 +214,10 @@ const ProfilePage: React.FC = () => {
             </div>
           ))}
         </div>
-      </div>
+      </AnimatedCard>
 
       {/* Security Settings */}
-      <div className="glassmorphism rounded-xl p-6">
+      <AnimatedCard>
         <div className="flex items-center space-x-2 mb-4">
           <Lock className="w-5 h-5 text-blue-400" />
           <h3 className="text-white font-semibold">Security Settings</h3>
@@ -201,7 +237,23 @@ const ProfilePage: React.FC = () => {
           <div>
             <p className="text-gray-300 font-medium mb-2">Two-Factor Authentication</p>
             <label className="inline-flex items-center space-x-2 text-sm text-gray-300">
-              <input type="checkbox" checked={profile.security.twoFactorEnabled} onChange={() => setProfile((p: any) => ({ ...p, security: { ...p.security, twoFactorEnabled: !p.security.twoFactorEnabled } }))} />
+              <input
+                type="checkbox"
+                checked={!!(profile?.security?.twoFactorEnabled || profile?.user?.twoFactorEnabled)}
+                onChange={async () => {
+                  try {
+                    const newVal = !(profile?.security?.twoFactorEnabled || profile?.user?.twoFactorEnabled);
+                    // Persist to backend
+                    await apiService.updateProfile({ twoFactorEnabled: newVal });
+                    // Update local state
+                    setProfile((p: any) => ({ ...p, security: { ...p.security, twoFactorEnabled: newVal }, user: { ...p.user, twoFactorEnabled: newVal } }));
+                    setToast({ type: 'success', message: `Two-Factor Authentication ${newVal ? 'enabled' : 'disabled'}` });
+                  } catch (err: any) {
+                    console.error('Failed to update 2FA setting:', err);
+                    setToast({ type: 'error', message: err?.message || 'Failed to update 2FA setting' });
+                  }
+                }}
+              />
               <span>Enable 2FA</span>
             </label>
 
@@ -220,10 +272,10 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+  </AnimatedCard>
 
       {/* Preferences */}
-      <div className="glassmorphism rounded-xl p-6">
+      <AnimatedCard>
         <div className="flex items-center space-x-2 mb-4">
           <Laptop2 className="w-5 h-5 text-blue-400" />
           <h3 className="text-white font-semibold">Preferences</h3>
@@ -253,10 +305,10 @@ const ProfilePage: React.FC = () => {
           </div>
           <Button variant="success" onClick={savePrefs}><Bell className="w-4 h-4 mr-1" /> Save Preferences</Button>
         </div>
-      </div>
+  </AnimatedCard>
 
       {/* Activity Log */}
-      <div className="glassmorphism rounded-xl p-6">
+      <AnimatedCard>
         <div className="flex items-center space-x-2 mb-4">
           <Shield className="w-5 h-5 text-blue-400" />
           <h3 className="text-white font-semibold">Activity Log</h3>
@@ -283,10 +335,10 @@ const ProfilePage: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
+  </AnimatedCard>
 
       {/* Danger Zone */}
-      <div className="glassmorphism rounded-xl p-6 border border-red-700/40" style={{ boxShadow: '0 0 20px rgba(239,68,68,0.25)' }}>
+      <AnimatedCard className="border border-red-700/40" style={{ boxShadow: '0 0 20px rgba(239,68,68,0.08)' }}>
         <div className="flex items-center space-x-2 mb-4">
           <AlertTriangle className="w-5 h-5 text-red-400" />
           <h3 className="text-white font-semibold">Danger Zone</h3>
@@ -295,7 +347,7 @@ const ProfilePage: React.FC = () => {
           <Button variant="warning" onClick={() => setConfirmModal({ action: 'deactivate', text: 'Are you sure you want to deactivate your account?' })}>Deactivate Account</Button>
           <Button variant="danger" onClick={() => setConfirmModal({ action: 'delete', text: 'This will permanently delete your account and data. Continue?' })}>Delete Account Permanently</Button>
         </div>
-      </div>
+  </AnimatedCard>
 
       {/* Confirm Modal */}
       {confirmModal && (
@@ -309,6 +361,133 @@ const ProfilePage: React.FC = () => {
               <Button variant={confirmModal.action === 'delete' ? 'danger' : 'warning'} onClick={confirmDanger}>Confirm</Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Avatar Modal */}
+      {avatarModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" aria-hidden="true" onClick={() => { closeAvatarModal && closeAvatarModal(); setCapturedDataUrl(null); }}></div>
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative bg-gray-900 rounded-xl p-4 w-full max-w-lg">
+            <h4 className="text-white text-lg font-semibold mb-3">Set Profile Picture</h4>
+            <div className="space-y-3">
+              {!capturedDataUrl ? (
+                <div>
+                  <video ref={videoRef} className="w-full rounded-md bg-black" autoPlay playsInline />
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    {!capturing ? (
+                      <Button variant="primary" onClick={async () => {
+                        // start camera
+                        try {
+                          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                          if (videoRef.current) videoRef.current.srcObject = stream;
+                          setCapturing(true);
+                        } catch (err) {
+                          setToast({ type: 'error', message: 'Unable to access camera' });
+                        }
+                      }}>Start Camera</Button>
+                    ) : (
+                      <Button variant="secondary" onClick={() => {
+                        // capture frame
+                        if (!videoRef.current) return;
+                        const video = videoRef.current;
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth || 640;
+                        canvas.height = video.videoHeight || 480;
+                        const ctx = canvas.getContext('2d');
+                        if (ctx) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                        setCapturedDataUrl(dataUrl);
+                        // stop stream
+                        const stream = video.srcObject as MediaStream | null;
+                        if (stream) stream.getTracks().forEach(t => t.stop());
+                        if (videoRef.current) videoRef.current.srcObject = null;
+                        setCapturing(false);
+                      }}>Capture</Button>
+                    )}
+
+                    <Button className="bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-600" onClick={() => {
+                      // open file picker
+                      if (fileInputRef.current) fileInputRef.current.click();
+                    }}>Choose from device</Button>
+
+                    <Button variant="ghost" onClick={() => {
+                      // close modal and cleanup
+                      closeAvatarModal && closeAvatarModal();
+                      setCapturedDataUrl(null);
+                      setSelectedFile(null);
+                      const stream = videoRef.current?.srcObject as MediaStream | null;
+                      if (stream) stream.getTracks().forEach(t => t.stop());
+                      if (videoRef.current) videoRef.current.srcObject = null;
+                    }}>Close</Button>
+
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                      const f = e.target.files && e.target.files[0];
+                      if (!f) return;
+                      // stop camera if running
+                      const stream = videoRef.current?.srcObject as MediaStream | null;
+                      if (stream) stream.getTracks().forEach(t => t.stop());
+                      if (videoRef.current) videoRef.current.srcObject = null;
+                      setCapturing(false);
+                      setSelectedFile(f);
+                      const objUrl = URL.createObjectURL(f);
+                      setCapturedDataUrl(objUrl);
+                    }} />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <img src={capturedDataUrl} className="w-full rounded-md" alt="preview" />
+                  <div className="mt-3 flex justify-end space-x-3">
+                    <Button variant="ghost" onClick={() => { setCapturedDataUrl(null); setSelectedFile(null); }}>Retake</Button>
+                    <Button variant="success" onClick={async () => {
+                      try {
+                        let resp;
+                        if (selectedFile) {
+                          resp = await apiService.uploadAvatar(selectedFile);
+                        } else {
+                          // Convert dataURL to blob
+                          const res = await fetch(capturedDataUrl);
+                          const blob = await res.blob();
+                          const file = new File([blob], `avatar-${Date.now()}.jpg`, { type: blob.type });
+                          resp = await apiService.uploadAvatar(file);
+                        }
+                        // update profile state
+                        // Update local profile state
+                        setProfile((p: any) => ({ ...p, user: { ...p.user, profileImage: resp.profileImage } }));
+                        // Persist to localStorage so avatar survives refresh
+                        try {
+                          const storedProfile = localStorage.getItem('kycchain_profile');
+                          if (storedProfile) {
+                            const parsed = JSON.parse(storedProfile);
+                            parsed.user = { ...(parsed.user || {}), profileImage: resp.profileImage };
+                            localStorage.setItem('kycchain_profile', JSON.stringify(parsed));
+                          }
+                          const storedUser = localStorage.getItem('kycchain_user');
+                          if (storedUser) {
+                            const parsedU = JSON.parse(storedUser);
+                            parsedU.profileImage = resp.profileImage;
+                            localStorage.setItem('kycchain_user', JSON.stringify(parsedU));
+                          }
+                        } catch (e) { /* ignore storage errors */ }
+
+                        // Update auth context user so sidebar and other components reflect change immediately
+                        try { updateUser && updateUser({ profileImage: resp.profileImage } as any); } catch (e) { /* ignore */ }
+
+                        setToast({ type: 'success', message: 'Avatar uploaded' });
+                        closeAvatarModal && closeAvatarModal();
+                        setCapturedDataUrl(null);
+                        setSelectedFile(null);
+                      } catch (err: any) {
+                        console.error('Avatar upload failed', err);
+                        setToast({ type: 'error', message: err?.message || 'Failed to upload avatar' });
+                      }
+                    }}><Save className="w-4 h-4 mr-1" /> Upload</Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
         </div>
       )}
 

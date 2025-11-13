@@ -1,47 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import UploadForm from '../../components/documents/UploadForm';
-import DocumentTable from '../../components/documents/DocumentTable';
-import DocumentPreviewModal from '../../components/documents/DocumentPreviewModal';
-import { getDocuments } from '../../services/mockApi';
+import React, { useState, useEffect, useCallback } from "react";
+import UploadForm from "../../components/documents/UploadForm";
+import DocumentTable from "../../components/documents/DocumentTable";
+import DocumentPreviewModal from "../../components/documents/DocumentPreviewModal";
+import AnimatedCard from "../../components/common/AnimatedCard";
+import { motion } from 'framer-motion';
+import { getDocuments } from "../../services/mockApi";
+import { useAuth } from "../../contexts/AuthContext";
+import { apiService } from "../../services/api";
+
+interface Document {
+  documentId: string;
+  fileName: string;
+  fileType: string;
+  uploadedAt: string;
+  status: string;
+  file_url?: string;
+  sha256?: string;
+  message?: string;
+  [key: string]: unknown;
+}
 
 const DocumentsPage: React.FC = () => {
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const { user } = useAuth();
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(
+    null,
+  );
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadDocuments();
-  }, []);
+  const loadDocuments = useCallback(async () => {
+    if (!user?.email) return;
 
-  const loadDocuments = async () => {
     try {
       setIsLoading(true);
-      const docs = await getDocuments();
+      // Try to load from backend first, fallback to mock API
+      let docs;
+      try {
+        docs = await apiService.getDocuments(user.email);
+      } catch (backendError) {
+        console.warn("Backend not available, using mock API:", backendError);
+        docs = await getDocuments();
+      }
       setDocuments(docs);
     } catch (error) {
-      console.error('Failed to load documents:', error);
+      console.error("Failed to load documents:", error);
     } finally {
       setIsLoading(false);
     }
+  }, [user?.email]);
+
+  useEffect(() => {
+    if (user?.email) {
+      loadDocuments();
+    }
+  }, [user?.email, loadDocuments]);
+
+  const handleUploadSuccess = (newDocument: Document) => {
+    setDocuments((prev) => [newDocument, ...prev]);
+    // Reload documents to ensure consistency with backend
+    loadDocuments();
   };
 
-  const handleUploadSuccess = (newDocument: any) => {
-    setDocuments(prev => [newDocument, ...prev]);
-    
-    // Simulate status updates
-    setTimeout(() => {
-      setDocuments(prev => 
-        prev.map(doc => 
-          doc.documentId === newDocument.documentId 
-            ? { ...doc, status: 'uploaded' }
-            : doc
-        )
-      );
-    }, 3000);
-  };
-
-  const handleViewDocument = (document: any) => {
+  const handleViewDocument = (document: Document) => {
     setSelectedDocument(document);
     setIsPreviewOpen(true);
   };
@@ -54,22 +75,29 @@ const DocumentsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="glassmorphism rounded-xl p-6">
-        <h1 className="text-2xl font-bold text-white mb-2">My Documents</h1>
-        <p className="text-gray-300">
-          Upload and manage your KYC documents. All files are encrypted and hashed for blockchain verification.
-        </p>
-      </div>
+      <AnimatedCard>
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.4}}>
+          <h1 className="text-2xl font-bold text-white mb-2">My Documents</h1>
+          <p className="text-gray-300">
+            Upload and manage your KYC documents. All files are encrypted and
+            hashed for blockchain verification.
+          </p>
+        </motion.div>
+      </AnimatedCard>
 
       {/* Upload Form */}
-      <UploadForm onUploadSuccess={handleUploadSuccess} />
+      <AnimatedCard>
+        <UploadForm onUploadSuccess={handleUploadSuccess} />
+      </AnimatedCard>
 
       {/* Documents Table */}
-      <DocumentTable
-        documents={documents}
-        onViewDocument={handleViewDocument}
-        isLoading={isLoading}
-      />
+      <AnimatedCard>
+        <DocumentTable
+          documents={documents}
+          onViewDocument={handleViewDocument}
+          isLoading={isLoading}
+        />
+      </AnimatedCard>
 
       {/* Preview Modal */}
       <DocumentPreviewModal

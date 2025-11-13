@@ -1,9 +1,10 @@
 import React from 'react';
 import { Shield, Github, Linkedin, Mail } from 'lucide-react';
+import { useScrollAnimation } from '../../hooks/useScrollAnimation';
 
 const Footer: React.FC = () => {
   return (
-    <footer id="contact" className="bg-gray-900/80 py-12 px-4 sm:px-6 lg:px-8 border-t border-gray-800">
+    <footer id="contact" className="bg-gray-900/80 py-12 md:py-16 px-4 sm:px-6 lg:px-8 border-t border-gray-800">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo & Description */}

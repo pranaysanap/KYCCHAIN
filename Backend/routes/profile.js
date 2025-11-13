@@ -1,7 +1,13 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import multer from "multer";
+import fs from "fs";
+import path from "path";
 import User from "../models/user.js";
+import UserDocument from "../models/UserDocument.js";
+import Consent from "../models/Consent.js";
+import cloudinary from "../cloudinary.js";
 
 const router = express.Router();
 
@@ -31,32 +37,35 @@ router.get('/profile', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Mock profile data (in real app, you'd have a separate Profile model)
+    // Build profile payload from saved user data
     const profile = {
       user: {
+        id: user._id,
         fullName: user.fullName,
+        profileImage: user.profileImage || null,
         email: user.email,
         phone: user.phone || '',
         address: user.address || '',
-        role: user.accountType === 'Individual User' ? 'user' : 'bank'
+        role: user.accountType === 'Individual User' ? 'user' : 'bank',
+        twoFactorEnabled: !!user.twoFactorEnabled,
       },
       security: {
-        twoFactorEnabled: false,
+        twoFactorEnabled: !!user.twoFactorEnabled,
         sessions: [
           {
             id: 'sess-1',
             device: 'Chrome on Windows',
             location: 'Current Location',
             ip: req.ip || '127.0.0.1',
-            lastActive: new Date().toISOString()
-          }
-        ]
+            lastActive: new Date().toISOString(),
+          },
+        ],
       },
       preferences: {
         theme: 'dark',
         emailAlerts: true,
         fraudAlerts: true,
-        language: 'en'
+        language: 'en',
       },
       activity: [
         {
@@ -64,9 +73,9 @@ router.get('/profile', authenticateToken, async (req, res) => {
           timestamp: new Date().toISOString(),
           action: 'Profile viewed',
           status: 'success',
-          ip: req.ip || '127.0.0.1'
-        }
-      ]
+          ip: req.ip || '127.0.0.1',
+        },
+      ],
     };
 
     res.json(profile);
@@ -86,11 +95,12 @@ router.put('/profile', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Update fields
-    if (fullName) user.fullName = fullName;
-    if (email) user.email = email;
-    if (phone !== undefined) user.phone = phone;
-    if (address !== undefined) user.address = address;
+  // Update fields
+  if (fullName) user.fullName = fullName;
+  if (email) user.email = email;
+  if (phone !== undefined) user.phone = phone;
+  if (address !== undefined) user.address = address;
+  if (req.body.twoFactorEnabled !== undefined) user.twoFactorEnabled = !!req.body.twoFactorEnabled;
 
     await user.save();
 
@@ -100,7 +110,8 @@ router.put('/profile', authenticateToken, async (req, res) => {
         email: user.email,
         phone: user.phone || '',
         address: user.address || '',
-        role: user.accountType === 'Individual User' ? 'user' : 'bank'
+        role: user.accountType === 'Individual User' ? 'user' : 'bank',
+        twoFactorEnabled: !!user.twoFactorEnabled,
       }
     });
   } catch (error) {
@@ -169,4 +180,97 @@ router.put('/preferences', authenticateToken, async (req, res) => {
   }
 });
 
+// Delete user account
+router.delete('/profile', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get all user documents to delete from Cloudinary
+    const userDocuments = await UserDocument.find({ email: user.email });
+
+    // Delete files from Cloudinary
+    for (const doc of userDocuments) {
+      try {
+        await cloudinary.uploader.destroy(doc.public_id, { resource_type: 'raw' });
+      } catch (cloudinaryError) {
+        console.error(`Failed to delete file ${doc.public_id} from Cloudinary:`, cloudinaryError);
+        // Continue with other deletions even if one fails
+      }
+    }
+
+    // Delete the entire user folder from Cloudinary
+    try {
+      await cloudinary.api.delete_folder(user.email);
+    } catch (folderError) {
+      console.error(`Failed to delete folder ${user.email} from Cloudinary:`, folderError);
+      // Continue with database deletions even if folder deletion fails
+    }
+
+    // Delete associated consents from database
+    await Consent.deleteMany({ userId: req.user.userId });
+
+    // Delete associated documents from database
+    await UserDocument.deleteMany({ email: user.email });
+
+    // Delete the user
+    await User.findByIdAndDelete(req.user.userId);
+
+    res.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Account deletion error:', error);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
 export default router;
+
+// POST /profile/avatar - upload profile avatar image
+// Uses multer to accept multipart/form-data; saves file to Cloudinary and updates User.profileImage
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const tempDir = path.join(process.cwd(), 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
+    cb(null, tempDir);
+  },
+  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname)),
+});
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB for avatars
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Unsupported avatar file type'));
+  },
+});
+
+router.post('/avatar', authenticateToken, avatarUpload.single('avatar'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Upload to Cloudinary under user's folder
+    const folder = `${user.email}/avatar`;
+    const result = await cloudinary.uploader.upload(file.path, { folder, resource_type: 'image' });
+
+    // Save to user
+    user.profileImage = result.secure_url;
+    user.profileImagePublicId = result.public_id;
+    await user.save();
+
+    // Remove temp file
+    try { fs.unlinkSync(file.path); } catch (e) { console.warn('Failed to unlink temp avatar file', e && e.message ? e.message : e); }
+
+    res.json({ message: 'Avatar uploaded', profileImage: user.profileImage });
+  } catch (err) {
+    console.error('Avatar upload error:', err);
+    res.status(500).json({ error: err.message || 'Avatar upload failed' });
+  }
+});

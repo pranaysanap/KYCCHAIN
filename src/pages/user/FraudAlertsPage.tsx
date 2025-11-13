@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, FileText, Building2, Search, Eye, CheckCircle2, Send } from 'lucide-react';
 import Button from '../../components/common/Button';
+import AnimatedCard from '../../components/common/AnimatedCard';
+import { useAnimatedCounter } from '../../hooks/useAnimatedCounter';
 import { FraudAlertRecord, getFraudAlerts, reportAlert, resolveAlert } from '../../services/mockApi';
 
 const severityBadge = (sev: 'high' | 'medium' | 'low') => {
@@ -46,6 +48,10 @@ const FraudAlertsPage: React.FC = () => {
   const [onlyOpen, setOnlyOpen] = useState(false);
   const [selected, setSelected] = useState<FraudAlertRecord | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Animated counters
+  const totalCount = useAnimatedCounter({ end: alerts.length, start: 0, duration: 700 });
+  const unresolvedCount = useAnimatedCounter({ end: alerts.filter(a => a.status !== 'resolved').length, start: 0, duration: 700 });
 
   useEffect(() => {
     (async () => {
@@ -103,7 +109,7 @@ const FraudAlertsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="glassmorphism rounded-xl p-6">
+      <AnimatedCard>
         <div className="flex items-center space-x-2">
           <AlertTriangle className="w-6 h-6 text-red-400" />
           <div>
@@ -111,22 +117,22 @@ const FraudAlertsPage: React.FC = () => {
             <p className="text-gray-300">Monitor suspicious activity related to your documents and consents</p>
           </div>
         </div>
-      </div>
+      </AnimatedCard>
 
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="glassmorphism rounded-xl p-4 neon-glow-red">
+        <AnimatedCard className="p-4 neon-glow-red">
           <p className="text-sm text-gray-400">Total Alerts</p>
-          <p className="text-2xl font-bold text-white">{alerts.length}</p>
-        </div>
-        <div className="glassmorphism rounded-xl p-4" style={{ boxShadow: '0 0 20px rgba(239,68,68,0.25)' }}>
+          <p className="text-2xl font-bold text-white">{Math.round(totalCount)}</p>
+        </AnimatedCard>
+        <AnimatedCard className="p-4" style={{ boxShadow: '0 0 20px rgba(239,68,68,0.08)' }}>
           <p className="text-sm text-gray-400">Unresolved Alerts</p>
-          <p className="text-2xl font-bold text-white">{alerts.filter(a => a.status !== 'resolved').length}</p>
-        </div>
-        <div className="glassmorphism rounded-xl p-4">
+          <p className="text-2xl font-bold text-white">{Math.round(unresolvedCount)}</p>
+        </AnimatedCard>
+        <AnimatedCard className="p-4">
           <p className="text-sm text-gray-400">Last Detected Alert</p>
           <p className="text-lg font-medium text-white">{alerts[0] ? new Date(alerts[0].timestamp).toLocaleString() : '—'}</p>
-        </div>
+        </AnimatedCard>
       </div>
 
       {/* Filters */}

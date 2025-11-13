@@ -24,6 +24,55 @@ function getStoredProfile(): any | null {
   }
 }
 
+// Simulate MongoDB Atlas collection for documents per user
+function getDocumentsKey(email: string): string {
+  return `kycchain_documents_${email}`;
+}
+
+function loadUserDocuments(email: string): any[] {
+  try {
+    const key = getDocumentsKey(email);
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveUserDocuments(email: string, documents: any[]): void {
+  try {
+    const key = getDocumentsKey(email);
+    localStorage.setItem(key, JSON.stringify(documents));
+  } catch (error) {
+    console.error('Failed to save documents to database:', error);
+  }
+}
+
+function saveUserDocument(email: string, document: any): void {
+  const userDocs = loadUserDocuments(email);
+  userDocs.unshift(document);
+  saveUserDocuments(email, userDocs);
+}
+
+function updateUserDocument(email: string, docId: string, updates: any): void {
+  const userDocs = loadUserDocuments(email);
+  const index = userDocs.findIndex(doc => doc.documentId === docId);
+  if (index !== -1) {
+    userDocs[index] = { ...userDocs[index], ...updates };
+    saveUserDocuments(email, userDocs);
+  }
+}
+
+function deleteUserDocument(email: string, docId: string): boolean {
+  const userDocs = loadUserDocuments(email);
+  const filteredDocs = userDocs.filter(doc => doc.documentId !== docId);
+  if (filteredDocs.length < userDocs.length) {
+    saveUserDocuments(email, filteredDocs);
+    return true;
+  }
+  return false;
+}
+
 // SHA-256 computation using Web Crypto API
 export async function sha256Hex(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
@@ -36,9 +85,15 @@ export async function sha256Hex(file: File): Promise<string> {
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function postUpload(file: File, metadata: { type: string }): Promise<any> {
+  // Check if user is authenticated
+  const authUser = getCurrentAuthUser();
+  if (!authUser || !authUser.email) {
+    throw new Error('User not authenticated');
+  }
+
   // Simulate upload delay
   await delay(1000);
-  
+
   const sha = await sha256Hex(file);
   const doc: any = {
     documentId: 'doc-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
@@ -50,47 +105,65 @@ export async function postUpload(file: File, metadata: { type: string }): Promis
     aiReport: null,
     uploadedAt: new Date().toISOString(),
     fileSize: file.size,
-    fileType: file.type
+    fileType: file.type,
+    userEmail: authUser.email // Associate document with user
   };
-  
-  docs.unshift(doc);
-  
-  // Simulate processing -> uploaded transition after 3 seconds
-  setTimeout(() => {
-    doc.status = 'uploaded';
-    doc.blockchainTx = '0x' + Math.random().toString(16).substr(2, 64);
-    doc.aiReport = {
-      anomalyScore: Math.random() * 0.3, // Low anomaly score for demo
-      forgeryProbability: Math.random() * 0.2,
-      duplicateDetection: false,
-      faceMismatch: false,
-      tamperedImage: false,
-      confidence: 0.95 + Math.random() * 0.05
-    };
-  }, 3000);
-  
+
+  // Set status to uploaded immediately and add blockchain and AI report
+  doc.status = 'uploaded';
+  doc.blockchainTx = '0x' + Math.random().toString(16).substr(2, 64);
+  doc.aiReport = {
+    anomalyScore: Math.random() * 0.3, // Low anomaly score for demo
+    forgeryProbability: Math.random() * 0.2,
+    duplicateDetection: false,
+    faceMismatch: false,
+    tamperedImage: false,
+    confidence: 0.95 + Math.random() * 0.05
+  };
+
+  // Save document to the shared collection
+  saveUserDocument(authUser.email, doc);
+
   return JSON.parse(JSON.stringify(doc));
 }
 
 export async function getDocuments(): Promise<any[]> {
+  // Check if user is authenticated
+  const authUser = getCurrentAuthUser();
+  if (!authUser || !authUser.email) {
+    return [];
+  }
+
   await delay(300); // Simulate API delay
-  return JSON.parse(JSON.stringify(docs));
+  // Load user-specific documents from localStorage
+  const userDocs = loadUserDocuments(authUser.email);
+  return JSON.parse(JSON.stringify(userDocs));
 }
 
 export async function getDocument(id: string): Promise<any | null> {
+  // Check if user is authenticated
+  const authUser = getCurrentAuthUser();
+  if (!authUser || !authUser.email) {
+    return null;
+  }
+
   await delay(200);
-  const doc = docs.find(d => d.documentId === id);
+  // Load user-specific documents and find the one with the given id
+  const userDocs = loadUserDocuments(authUser.email);
+  const doc = userDocs.find(d => d.documentId === id);
   return doc ? JSON.parse(JSON.stringify(doc)) : null;
 }
 
 export async function deleteDocument(id: string): Promise<boolean> {
-  await delay(500);
-  const index = docs.findIndex(d => d.documentId === id);
-  if (index !== -1) {
-    docs.splice(index, 1);
-    return true;
+  // Check if user is authenticated
+  const authUser = getCurrentAuthUser();
+  if (!authUser || !authUser.email) {
+    return false;
   }
-  return false;
+
+  await delay(500);
+  // Delete document from the shared collection
+  return deleteUserDocument(authUser.email, id);
 }
 
 // -------------------------------
@@ -124,6 +197,24 @@ export async function grantConsent(institutionName: string): Promise<ConsentReco
     }
     existing.status = 'granted';
     existing.lastUpdated = timestamp;
+
+    // Log consent grant event
+    const authUser = getCurrentAuthUser();
+    if (authUser) {
+      const logEntry = {
+        id: 'log-' + Date.now(),
+        ts: timestamp,
+        userId: authUser.email, // Using email as userId for mock
+        userName: authUser.name || 'Unknown User',
+        docType: null,
+        action: 'consent_granted',
+        admin: institutionName,
+        tx: '0x' + Math.random().toString(16).slice(2).padEnd(64, '0'),
+        status: 'success'
+      };
+      verificationLogs.unshift(logEntry);
+    }
+
     return JSON.parse(JSON.stringify(existing));
   }
 
@@ -134,6 +225,24 @@ export async function grantConsent(institutionName: string): Promise<ConsentReco
     lastUpdated: timestamp
   };
   consents.unshift(record);
+
+  // Log consent grant event for new consent
+  const authUser = getCurrentAuthUser();
+  if (authUser) {
+    const logEntry = {
+      id: 'log-' + Date.now(),
+      ts: timestamp,
+      userId: authUser.email,
+      userName: authUser.name || 'Unknown User',
+      docType: null,
+      action: 'consent_granted',
+      admin: institutionName,
+      tx: '0x' + Math.random().toString(16).slice(2).padEnd(64, '0'),
+      status: 'success'
+    };
+    verificationLogs.unshift(logEntry);
+  }
+
   return JSON.parse(JSON.stringify(record));
 }
 
